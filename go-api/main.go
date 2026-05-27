@@ -80,6 +80,9 @@ func main() {
 	})
 
 	app.Get("/", func(c *fiber.Ctx) error {
+		return c.SendString("API de Go funcionando correctamente")
+	})
+	app.Get("/", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"message": "Go QR API running - Process Validated",
 		})
