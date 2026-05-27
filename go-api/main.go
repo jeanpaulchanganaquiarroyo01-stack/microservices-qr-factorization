@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors" // 1. Importación indispensable
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -15,6 +16,14 @@ type MatrixRequest struct {
 
 func main() {
 	app := fiber.New()
+
+	// 2. CONFIGURACIÓN DE CORS
+	// Esto habilita que tu SPA en Vue 3 consuma la API sin bloqueos del navegador
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*", // En el futuro puedes especificar la URL exacta de tu frontend
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		AllowMethods: "POST, GET, OPTIONS",
+	}))
 
 	// Health Check / Ruta raíz consolidada
 	app.Get("/", func(c *fiber.Ctx) error {
@@ -93,7 +102,14 @@ func main() {
 		})
 	})
 
-	app.Listen(":8080")
+	// 3. ASIGNACIÓN DINÁMICA DEL PUERTO PARA RENDER
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // Si está en local, usará el 8080 por defecto
+	}
+
+	log.Println("Servidor corriendo en el puerto:", port)
+	log.Fatal(app.Listen(":" + port))
 }
 
 // Función auxiliar para rotar/transponer matrices rectangulares
