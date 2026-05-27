@@ -4,14 +4,27 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors" // Modificación 1: Importación de CORS
+	"github.com/golang-jwt/jwt/v5"
 	"gonum.org/v1/gonum/mat"
 )
 
 type MatrixRequest struct {
 	Matrix [][]float64 `json:"matrix"`
+}
+
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type CustomClaims struct {
+	Username string `json:"username"`
+	Role     string `json:"role"`
+	jwt.RegisteredClaims
 }
 
 func main() {
@@ -23,13 +36,49 @@ func main() {
 		AllowMethods: "POST, GET, OPTIONS",
 	}))
 
+	app.Post("/login", func(c *fiber.Ctx) error {
+		var req LoginRequest
+
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Cuerpo de petición inválido"})
+		}
+
+		if req.Username != "admin" || req.Password != "interseguro2026" {
+			return c.Status(401).JSON(fiber.Map{"error": "Credenciales incorrectas"})
+		}
+
+		jwtSecret := os.Getenv("JWT_SECRET")
+		if jwtSecret == "" {
+			jwtSecret = "ClaveSecretaSuperSeguraInterseguro2026"
+		}
+
+		claims := CustomClaims{
+			Username: req.Username,
+			Role:     "Analista",
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(2 * time.Hour)),
+				IssuedAt:  jwt.NewNumericDate(time.Now()),
+			},
+		}
+
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		tokenString, err := token.SignedString([]byte(jwtSecret))
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "No se pudo generar el token"})
+		}
+
+		return c.JSON(fiber.Map{
+			"token": tokenString,
+		})
+	})
+
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"message": "Go QR API running - Process Validated",
 		})
 	})
 
-	app.Post("/qr", func(c *fiber.Ctx) error {
+	app.Post("/qr", jwtMiddleware(), func(c *fiber.Ctx) error {
 		var req MatrixRequest
 
 		if err := c.BodyParser(&req); err != nil {
@@ -127,6 +176,50 @@ func matrixToSlice(m mat.Matrix) [][]float64 {
 		}
 	}
 	return result
+}
+
+// Middleware personalizado para proteger rutas con JWT
+func jwtMiddleware() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// 1. Extraer la cabecera Authorization
+		authHeader := c.Get("Authorization")
+		if authHeader == "" {
+			return c.Status(401).JSON(fiber.Map{"error": "Falta el token de autenticación"})
+		}
+
+		// 2. Verificar el formato "Bearer <token>"
+		if len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+			return c.Status(401).JSON(fiber.Map{"error": "Formato de token inválido (debe ser Bearer)"})
+		}
+		tokenString := authHeader[7:]
+
+		// 3. Obtener la clave secreta
+		jwtSecret := os.Getenv("JWT_SECRET")
+		if jwtSecret == "" {
+			jwtSecret = "ClaveSecretaSuperSeguraInterseguro2026"
+		}
+
+		// 4. Parsear y validar el token
+		token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(t *jwt.Token) (interface{}, error) {
+			// Validar que el método de firma sea HS256
+			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fiber.NewError(401, "Método de firma inesperado")
+			}
+			return []byte(jwtSecret), nil
+		})
+
+		if err != nil || !token.Valid {
+			return c.Status(401).JSON(fiber.Map{"error": "Token inválido o expirado"})
+		}
+
+		// 5. Si todo está perfecto, guardar los datos del usuario en el contexto y continuar
+		if claims, ok := token.Claims.(*CustomClaims); ok {
+			c.Locals("username", claims.Username)
+			c.Locals("role", claims.Role)
+		}
+
+		return c.Next()
+	}
 }
 
 func sendToNode(payload interface{}) (map[string]interface{}, error) {
