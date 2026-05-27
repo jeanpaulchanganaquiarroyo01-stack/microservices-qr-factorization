@@ -9,7 +9,7 @@ createApp({
         const errorMessage = ref(null);
         
         const jwtToken = ref(null);
-        const API_BASE = 'https://microservices-qr-factorization.onrender.com';
+        const API_BASE = 'https://matrix-core-go.onrender.com';
 
         const generateMatrix = () => {
             const newMatrix = [];
