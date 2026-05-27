@@ -1,0 +1,43 @@
+name: Matrix Pipeline - CI Check
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  validate-go:
+    name: Validar API de Go
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout de código
+        uses: actions/checkout@v4
+
+      - name: Configurar Entorno de Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Validar Dependencias y Compilación
+        run: |
+          cd go-api
+          go mod tidy
+          go build -o main .
+
+  validate-node:
+    name: Validar API de Node.js
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout de código
+        uses: actions/checkout@v4
+
+      - name: Configurar Entorno de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar Dependencias
+        run: |
+          cd node-api
+          npm install

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interseguro - Matrix Pipeline Challenge</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        :root {
+            --primary: #0052cc;
+            --primary-hover: #0065ff;
+            --bg: #f4f5f7;
+            --card-bg: #ffffff;
+            --text: #172b4d;
+            --border: #dfe1e6;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h1 { color: var(--primary); margin-bottom: 5px; }
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(9, 30, 66, 0.1);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .grid-config {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        input[type="number"] {
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            width: 80px;
+            font-size: 16px;
+        }
+        .matrix-input-grid {
+            display: inline-block;
+            background: #ebecf0;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+        .matrix-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .matrix-cell {
+            width: 70px;
+            padding: 8px;
+            text-align: center;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: var(--primary-hover); }
+        .results-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
+        .stats-panel {
+            background: #ebf5ff;
+            border-left: 5px solid var(--primary);
+        }
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0,82,204,0.1);
+        }
+        .stat-item:last-child { border: none; }
+        .matrix-display {
+            background: #fafbfc;
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            overflow-x: auto;
+            margin-bottom: 15px;
+        }
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .badge-true { background: #e3fcef; color: #006644; }
+        .badge-false { background: #ffebe6; color: #bf2600; }
+        .error-banner {
+            background: #ffebe6;
+            color: #bf2600;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app" class="container">
+    <header>
+        <h1>Interseguro Technical Challenge</h1>
+    </header>
+
+    <div class="card">
+        <h3>1. Configurar Dimensiones de la Matriz Rectangular</h3>
+        <div class="grid-config">
+            <label>Filas:</label>
+            <input type="number" v-model.number="rows" min="1" max="10" @change="generateMatrix">
+            <label>Columnas:</label>
+            <input type="number" v-model.number="cols" min="1" max="10" @change="generateMatrix">
+            <button @click="processPipeline">Procesar </button>
+        </div>
+
+        <div class="matrix-input-grid" v-if="matrixData.length > 0">
+            <div v-for="(row, i) in matrixData" :key="i" class="matrix-row">
+                <input type="number" 
+                       v-for="(cell, j) in row" 
+                       :key="j" 
+                       v-model.number="matrixData[i][j]" 
+                       class="matrix-cell" 
+                       step="any">
+            </div>
+        </div>
+    </div>
+
+    <div class="error-banner" v-if="errorMessage">
+        Error: {{ errorMessage }}
+    </div>
+
+    <div class="results-layout" v-if="results">
+        
+        <div class="card">
+            <h3>2. Transformaciones y Descomposición Algebráica (Go API)</h3>
+            
+            <h4>Matriz Rotada (Transpuesta):</h4>
+            <div class="matrix-display">
+                <div v-for="row in results.matrix_rotated">
+                    [ <span v-for="val in row">{{ val.toFixed(4) }} &nbsp;&nbsp; </span> ]
+                </div>
+            </div>
+
+            <h4>Matriz Q (Ortogonal):</h4>
+            <div class="matrix-display">
+                <div v-for="row in results.qr.Q">
+                    [ <span v-for="val in row">{{ val.toFixed(4) }} &nbsp;&nbsp; </span> ]
+                </div>
+            </div>
+
+            <h4>Matriz R (Triangular Superior):</h4>
+            <div class="matrix-display">
+                <div v-for="row in results.qr.R">
+                    [ <span v-for="val in row">{{ val.toFixed(4) }} &nbsp;&nbsp; </span> ]
+                </div>
+            </div>
+        </div>
+
+        <div class="card stats-panel">
+            <h3>3. Analítica Descriptiva (Node.js API)</h3>
+            <div class="stat-item">
+                <strong>Valor Máximo:</strong>
+                <span>{{ results.stats.max.toFixed(4) }}</span>
+            </div>
+            <div class="stat-item">
+                <strong>Valor Mínimo:</strong>
+                <span>{{ results.stats.min.toFixed(4) }}</span>
+            </div>
+            <div class="stat-item">
+                <strong>Suma Total:</strong>
+                <span>{{ results.stats.sum.toFixed(4) }}</span>
+            </div>
+            <div class="stat-item">
+                <strong>Promedio General:</strong>
+                <span>{{ results.stats.average.toFixed(4) }}</span>
+            </div>
+            <div class="stat-item">
+                <strong>¿Q es Diagonal?:</strong>
+                <span :class="['badge', results.stats.QIsDiagonal ? 'badge-true' : 'badge-false']">
+                    {{ results.stats.QIsDiagonal ? 'SÍ' : 'NO' }}
+                </span>
+            </div>
+            <div class="stat-item">
+                <strong>¿R es Diagonal?:</strong>
+                <span :class="['badge', results.stats.RIsDiagonal ? 'badge-true' : 'badge-false']">
+                    {{ results.stats.RIsDiagonal ? 'SÍ' : 'NO' }}
+                </span>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const { createApp, ref, onMounted } = Vue;
+
+    createApp({
+        setup() {
+            const rows = ref(3);
+            const cols = ref(2);
+            const matrixData = ref([]);
+            const results = ref(null);
+            const errorMessage = ref(null);
+
+            // Genera la estructura inicial de la matriz basada en filas y columnas
+            const generateMatrix = () => {
+                const newMatrix = [];
+                for (let i = 0; i < rows.value; i++) {
+                    const row = [];
+                    for (let j = 0; j < cols.value; j++) {
+                        // Inicializa con valores por defecto para pruebas rápidas
+                        row.push(Math.floor(Math.random() * 10) + 1);
+                    }
+                    newMatrix.push(row);
+                }
+                matrixData.value = newMatrix;
+            };
+
+            // Envía la matriz al backend unificado de Go (puerto 8080)
+            const processPipeline = async () => {
+    errorMessage.value = null;
+    try {
+        // Identifica dinámicamente si estás en entorno local o en producción
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        
+        // Si estás local usa el puerto 8080. Si estás en la nube usa la URL que te dará Render/Railway.
+        const backendUrl = isLocal 
+            ? 'http://localhost:8080/qr' 
+            : 'https://tu-api-go-en-la-nube.onrender.com/qr'; // <--- Aquí pones la URL final de Go después
+
+        const response = await fetch(backendUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ matrix: matrixData.value })
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Fallo en el servidor');
+        }
+
+        results.value = await response.json();
+    } catch (error) {
+        errorMessage.value = error.message;
+        results.value = null;
+    }
+};
+
+            onMounted(() => {
+                generateMatrix();
+            });
+
+            return {
+                rows,
+                cols,
+                matrixData,
+                results,
+                errorMessage,
+                generateMatrix,
+                processPipeline
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>

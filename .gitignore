@@ -1,0 +1,17 @@
+# Node dependencies
+**/node_modules/
+**/npm-debug.log
+
+# Go binaries and tools
+**/main
+**/go-api/main
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+.vscode/
