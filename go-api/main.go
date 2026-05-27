@@ -78,6 +78,12 @@ func main() {
 		})
 	})
 
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"message": "Go QR API running - Process Validated",
+		})
+	})
+
 	app.Post("/qr", jwtMiddleware(), func(c *fiber.Ctx) error {
 		var req MatrixRequest
 
