@@ -31,9 +31,10 @@ func main() {
 	app := fiber.New()
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
-		AllowMethods: "POST, GET, OPTIONS",
+		AllowOrigins:     "*",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowMethods:     "POST, GET, OPTIONS",
+		AllowCredentials: true,
 	}))
 
 	app.Post("/login", func(c *fiber.Ctx) error {

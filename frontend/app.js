@@ -8,10 +8,10 @@ createApp({
         const results = ref(null);
         const errorMessage = ref(null);
         
-        // 🔑 Nueva variable reactiva para almacenar el JWT Token
         const jwtToken = ref(null);
+        // URL base de tu backend en Render
+        const API_BASE = 'https://microservices-qr-factorization.onrender.com';
 
-        // Generar matriz aleatoria
         const generateMatrix = () => {
             const newMatrix = [];
             for (let i = 0; i < rows.value; i++) {
@@ -24,13 +24,9 @@ createApp({
             matrixData.value = newMatrix;
         };
 
-        // 🔐 Función para autenticarse automáticamente con el backend de Go
         const loginAndGetToken = async () => {
             try {
-                const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-                const loginUrl = isLocal 
-                    ? 'http://localhost:8080/login' 
-                    : 'https://microservices-qr-factorization.onrender.com/login'; // Usamos tu URL real de Render
+                const loginUrl = `${API_BASE}/login`;
 
                 const response = await fetch(loginUrl, {
                     method: 'POST',
@@ -44,7 +40,7 @@ createApp({
                 if (!response.ok) throw new Error('No se pudo autenticar el cliente web');
                 
                 const data = await response.json();
-                jwtToken.value = data.token; // Guardamos el token de acceso
+                jwtToken.value = data.token; 
                 console.log('🔒 Autenticación JWT exitosa');
             } catch (error) {
                 console.error('Error en login:', error);
@@ -52,11 +48,9 @@ createApp({
             }
         };
 
-        // Procesar matriz enviando el token en la cabecera
         const processPipeline = async () => {
             errorMessage.value = null;
             
-            // Verificación previa de seguridad
             if (!jwtToken.value) {
                 errorMessage.value = "Falta el token de autenticación. Intentando reconectar...";
                 await loginAndGetToken();
@@ -64,24 +58,19 @@ createApp({
             }
 
             try {
-                const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-                
-                const backendUrl = isLocal 
-                    ? 'http://localhost:8080/qr' 
-                    : 'https://microservices-qr-factorization.onrender.com/qr'; // Tu URL real de Render
+                const backendUrl = `${API_BASE}/qr`;
 
                 const response = await fetch(backendUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${jwtToken.value}` // 👈 ¡OJO AQUÍ! Inyectamos el Bearer token
+                        'Authorization': `Bearer ${jwtToken.value}` 
                     },
                     body: JSON.stringify({ matrix: matrixData.value })
                 });
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        // Si el token expiró, reintentamos el login una vez
                         await loginAndGetToken();
                         return processPipeline();
                     }
@@ -96,10 +85,9 @@ createApp({
             }
         };
 
-        // Al cargar el componente, inicializamos la matriz y el Token
         onMounted(async () => {
             generateMatrix();
-            await loginAndGetToken(); // 🚀 El frontend se loguea de inmediato al abrir la página
+            await loginAndGetToken(); 
         });
 
         return {
