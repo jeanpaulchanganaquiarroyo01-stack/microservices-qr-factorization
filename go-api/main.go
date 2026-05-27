@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors" // 1. Importación indispensable
+	"github.com/gofiber/fiber/v2/middleware/cors" // Modificación 1: Importación de CORS
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -17,15 +17,12 @@ type MatrixRequest struct {
 func main() {
 	app := fiber.New()
 
-	// 2. CONFIGURACIÓN DE CORS
-	// Esto habilita que tu SPA en Vue 3 consuma la API sin bloqueos del navegador
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*", // En el futuro puedes especificar la URL exacta de tu frontend
+		AllowOrigins: "*",
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 		AllowMethods: "POST, GET, OPTIONS",
 	}))
 
-	// Health Check / Ruta raíz consolidada
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"message": "Go QR API running - Process Validated",
@@ -35,14 +32,12 @@ func main() {
 	app.Post("/qr", func(c *fiber.Ctx) error {
 		var req MatrixRequest
 
-		// 1. Parsing del Body
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(400).JSON(fiber.Map{
 				"error": "invalid body",
 			})
 		}
 
-		// 2. Validación de Matriz Vacía
 		if len(req.Matrix) == 0 {
 			return c.Status(400).JSON(fiber.Map{
 				"error": "matrix is empty",
@@ -51,7 +46,6 @@ func main() {
 
 		cols := len(req.Matrix[0])
 
-		// 3. Validación de consistencia rectangular
 		for _, row := range req.Matrix {
 			if len(row) != cols {
 				return c.Status(400).JSON(fiber.Map{
@@ -60,18 +54,15 @@ func main() {
 			}
 		}
 
-		// 4. EJECUCIÓN DE LA ROTACIÓN (Transposición de la matriz original)
 		rotatedMatrix := rotateMatrix(req.Matrix)
 		rotatedRows := len(rotatedMatrix)
 		rotatedCols := len(rotatedMatrix[0])
 
-		// 5. Aplanamiento de la matriz ROTADA para Gonum
 		data := make([]float64, 0, rotatedRows*rotatedCols)
 		for _, row := range rotatedMatrix {
 			data = append(data, row...)
 		}
 
-		// 6. Factorización QR sobre la matriz rotada
 		A := mat.NewDense(rotatedRows, rotatedCols, data)
 		var qr mat.QR
 		qr.Factorize(A)
@@ -86,7 +77,6 @@ func main() {
 			"R": matrixToSlice(&r),
 		}
 
-		// 7. Envío de datos por HTTP al microservicio de Node.js
 		stats, err := sendToNode(qrResponse)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{
@@ -94,7 +84,6 @@ func main() {
 			})
 		}
 
-		// 8. Respuesta Unificada al Cliente
 		return c.JSON(fiber.Map{
 			"matrix_rotated": rotatedMatrix,
 			"qr":             qrResponse,
@@ -102,14 +91,11 @@ func main() {
 		})
 	})
 
-	// 3. ASIGNACIÓN DINÁMICA DEL PUERTO PARA RENDER
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080" // Si está en local, usará el 8080 por defecto
+		port = "8080"
 	}
-
-	log.Println("Servidor corriendo en el puerto:", port)
-	log.Fatal(app.Listen(":" + port))
+	app.Listen(":" + port)
 }
 
 // Función auxiliar para rotar/transponer matrices rectangulares
