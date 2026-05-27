@@ -9,7 +9,6 @@ createApp({
         const errorMessage = ref(null);
         
         const jwtToken = ref(null);
-        // URL base de tu backend en Render
         const API_BASE = 'https://microservices-qr-factorization.onrender.com';
 
         const generateMatrix = () => {
@@ -26,9 +25,7 @@ createApp({
 
         const loginAndGetToken = async () => {
             try {
-                const loginUrl = `${API_BASE}/login`;
-
-                const response = await fetch(loginUrl, {
+                const response = await fetch(`${API_BASE}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -37,14 +34,12 @@ createApp({
                     })
                 });
 
-                if (!response.ok) throw new Error('No se pudo autenticar el cliente web');
+                if (!response.ok) throw new Error('No se pudo autenticar');
                 
                 const data = await response.json();
                 jwtToken.value = data.token; 
-                console.log('🔒 Autenticación JWT exitosa');
             } catch (error) {
-                console.error('Error en login:', error);
-                errorMessage.value = "Error de seguridad: No se pudo establecer conexión segura.";
+                errorMessage.value = "Error de conexión.";
             }
         };
 
@@ -52,15 +47,12 @@ createApp({
             errorMessage.value = null;
             
             if (!jwtToken.value) {
-                errorMessage.value = "Falta el token de autenticación. Intentando reconectar...";
                 await loginAndGetToken();
                 if (!jwtToken.value) return;
             }
 
             try {
-                const backendUrl = `${API_BASE}/qr`;
-
-                const response = await fetch(backendUrl, {
+                const response = await fetch(`${API_BASE}/qr`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -74,8 +66,7 @@ createApp({
                         await loginAndGetToken();
                         return processPipeline();
                     }
-                    const errData = await response.json();
-                    throw new Error(errData.error || 'Fallo en el servidor');
+                    throw new Error('Error al procesar');
                 }
 
                 results.value = await response.json();

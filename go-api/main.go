@@ -31,7 +31,7 @@ func main() {
 	app := fiber.New()
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "*",
+		AllowOrigins:     "https://matrix-app-frontend.onrender.com",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 		AllowMethods:     "POST, GET, OPTIONS",
 		AllowCredentials: true,
